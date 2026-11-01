@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>شات الذكاء الاصطناعي الحر</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --chat-bg: #1e1e1e;
+            --panel-bg: #181818;
+            --border-color: #333333;
+            --text-color: #ffffff;
+            --text-muted: #a0a0a0;
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+            --bubble-user: #2d2d2d;
+            --bubble-ai: #1a1a1a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            height: 60px;
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            z-index: 10;
+        }
+
+        .header-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .header-btn:hover {
+            background-color: var(--border-color);
+        }
+
+        h1.title {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        .screen {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            height: calc(100vh - 60px);
+            overflow: hidden;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 15px;
+            line-height: 1.5;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        .message.user {
+            background-color: var(--bubble-user);
+            align-self: flex-start;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.ai {
+            background-color: var(--bubble-ai);
+            border: 1px solid var(--border-color);
+            align-self: flex-end;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message img, .message video {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 8px;
+        }
+
+        .chat-input-area {
+            padding: 12px 16px;
+            background-color: var(--panel-bg);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chat-input-area textarea {
+            flex: 1;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 10px 14px;
+            border-radius: 20px;
+            resize: none;
+            max-height: 120px;
+            font-size: 15px;
+            outline: none;
+        }
+
+        .chat-input-area textarea:focus {
+            border-color: var(--accent-color);
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 20px;
+            padding: 6px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .icon-btn:hover {
+            color: var(--text-color);
+            background-color: var(--border-color);
+        }
+
+        .send-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+
+        .send-btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .media-preview {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .preview-item {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .preview-item img, .preview-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .preview-item .remove-media {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 10px;
+            cursor: pointer;
+        }
+
+        .lab-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .lab-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .lab-group label {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .lab-group textarea, .lab-group input {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            resize: vertical;
+        }
+
+        .lab-group textarea {
+            min-height: 120px;
+        }
+
+        .save-lab-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            right: -280px;
+            width: 280px;
+            height: 100%;
+            background-color: var(--panel-bg);
+            border-left: 1px solid var(--border-color);
+            z-index: 100;
+            transition: right 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar.open {
+            right: 0;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+        }
+
+        .sidebar-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .chat-item {
+            padding: 10px 12px;
+            border-radius: 6px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chat-item:hover {
+            border-color: var(--accent-color);
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 90;
+            display: none;
+        }
+
+        .overlay.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <button class="header-btn" onclick="switchScreen('labScreen')">المختبر</button>
+        <h1 class="title" id="headerTitle">شات ذكاء اصطناعي حر</h1>
+        <button class="header-btn" onclick="toggleSidebar()">الدردشات</button>
+    </header>
+
+    <div id="chatScreen" class="screen active">
+        <div class="chat-messages" id="chatMessages">
+            <div class="message ai">مرحباً. توجه إلى "المختبر" أعلى اليسار وضع مفتاح الـ API والتعليمات والبرومبت المخصص بالطريقة التي تريدها لتوجيه ردود النموذج بدقة وحيادية تامة.</div>
+        </div>
+
+        <div id="mediaPreviewContainer" class="media-preview" style="padding: 0 16px;"></div>
+
+        <div class="chat-input-area">
+            <div class="input-row">
+                <input type="file" id="mediaInput" accept="image/*,video/*" style="display: none;" multiple onchange="handleFileSelect(event)">
+                <button class="icon-btn" onclick="document.getElementById('mediaInput').click()" title="إرفاق صورة أو فيديو">📎</button>
+                <textarea id="userInput" rows="1" placeholder="اكتب رسالتك باختصار..." onkeydown="handleKeyDown(event)"></textarea>
+                <button class="send-btn" onclick="sendMessage()">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="labScreen" class="screen">
+        <div class="lab-container">
+            <h2 style="font-size: 18px; font-weight: 500;">المختبر (التحكم بالبرومبت والقيود)</h2>
+            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">أدخل هنا التعليمات والحدود التي تريد أن يلتزم بها النموذج حرفياً (مثل: أجب باختصار شديد، بدون مقدمات، بدون قيود، إلخ).</p>
+            
+            <div class="lab-group">
+                <label for="apiKeyInput">مفتاح Groq API (احصل عليه مجاناً من console.groq.com):</label>
+                <input type="password" id="apiKeyInput" placeholder="gsk_...">
+            </div>
+
+            <div class="lab-group">
+                <label for="systemPromptInput">برومبت النظام (System Prompt / الحدود والقيود المخصصة):</label>
+                <textarea id="systemPromptInput" placeholder="اكتب شروطك هنا..."></textarea>
+            </div>
+
+            <button class="save-lab-btn" onclick="saveLabSettings()">حفظ التطبيق والعودة للشات</button>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <span>الدردشات المحفوظة</span>
+            <button class="header-btn" onclick="newChat()">+ جديد</button>
+        </div>
+        <div class="sidebar-list" id="chatList"></div>
+    </div>
+
+    <script>
+        let currentScreen = 'chatScreen';
+        let attachedFiles = [];
+        let currentChatId = null;
+
+        // قراءة الإعدادات المحفوظة مسبقاً
+        let systemPrompt = localStorage.getItem('system_prompt') || "أنت مساعد ذكي تجيب باختصار، مباشرة، وبدون مقدمات أو استعراض للقدرات وحسب التعليمات المحددة.";
+        let apiKey = localStorage.getItem('groq_api_key') || "";
+
+        document.getElementById('systemPromptInput').value = systemPrompt;
+        document.getElementById('apiKeyInput').value = apiKey;
+
+        function switchScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            currentScreen = screenId;
+            document.getElementById('headerTitle').innerText = (screenId === 'chatScreen') ? 'شات ذكاء اصطناعي حر' : 'إعدادات المختبر';
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('active');
+            renderChatList();
+        }
+
+        function saveLabSettings() {
+            systemPrompt = document.getElementById('systemPromptInput').value;
+            apiKey = document.getElementById('apiKeyInput').value.trim();
+            localStorage.setItem('system_prompt', systemPrompt);
+            localStorage.setItem('groq_api_key', apiKey);
+            alert('تم الحفظ بنجاح!');
+            switchScreen('chatScreen');
+        }
+
+        function handleFileSelect(event) {
+            const files = event.target.files;
+            for (let file of files) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    attachedFiles.push({ type: file.type.startsWith('image') ? 'image' : 'video', data: e.target.result });
+                    renderPreviews();
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function renderPreviews() {
+            const container = document.getElementById('mediaPreviewContainer');
+            container.innerHTML = '';
+            attachedFiles.forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'preview-item';
+                item.innerHTML = (file.type === 'image') ? 
+                    `<img src="${file.data}"><button class="remove-media" onclick="removeFile(${index})">×</button>` :
+                    `<video src="${file.data}"></video><button class="remove-media" onclick="removeFile(${index})">×</button>`;
+                container.appendChild(item);
+            });
+        }
+
+        function removeFile(index) {
+            attachedFiles.splice(index, 1);
+            renderPreviews();
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const text = input.value.trim();
+            if (!text && attachedFiles.length === 0) return;
+
+            if (!apiKey) {
+                alert('الرجاء إدخال مفتاح Groq API في صفحة "المختبر" أعلى اليسار أولاً.');
+                switchScreen('labScreen');
+                return;
+            }
+
+            const chatMessages = document.getElementById('chatMessages');
+
+            // عرض رسالة المستخدم
+            let userHtml = `<div class="message user">${text}`;
+            attachedFiles.forEach(file => {
+                userHtml += (file.type === 'image') ? `<br><img src="${file.data}">` : `<br><video src="${file.data}" controls></video>`;
+            });
+            userHtml += `</div>`;
+            chatMessages.innerHTML += userHtml;
+
+            const userQuery = text;
+            input.value = '';
+            attachedFiles = [];
+            document.getElementById('mediaPreviewContainer').innerHTML = '';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // إضافة رسالة انتظار للرد
+            const aiResponseDiv = document.createElement('div');
+            aiResponseDiv.className = 'message ai';
+            aiResponseDiv.innerText = 'جاري الرد...';
+            chatMessages.appendChild(aiResponseDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            try {
+                // إرسال الطلب للنموذج الحقيقي عبر API
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: "llama-3.3-70b-versatile", // نموذج قوي وسريع ومجاني عبر Groq
+                        messages: [
+                            { role: "system", content: systemPrompt },
+                            { role: "user", content: userQuery }
+                        ],
+                        temperature: 0.7
+                    })
+                });
+
+                const data = await response.json();
+                if(data.choices && data.choices[0]) {
+                    aiResponseDiv.innerText = data.choices[0].message.content;
+                } else if(data.error) {
+                    aiResponseDiv.innerText = 'خطأ من الـ API: ' + data.error.message;
+                } else {
+                    aiResponseDiv.innerText = 'حدث خطأ غير متوقع أثناء استلام الرد.';
+                }
+            } catch (error) {
+                aiResponseDiv.innerText = 'تعذر الاتصال بالخادم. تأكد من اتصال الإنترنت وصحة المفتاح.';
+            }
+
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            saveCurrentChat();
+        }
+
+        function newChat() {
+            document.getElementById('chatMessages').innerHTML = '<div class="message ai">بدء دردشة جديدة نظيفة. تم اعتماد تعليمات المختبر الحالية.</div>';
+            currentChatId = 'chat_' + Date.now();
+            toggleSidebar();
+        }
+
+        function saveCurrentChat() {
+            let chats = JSON.parse(localStorage.getItem('saved_chats')) || [];
+            if(!currentChatId) currentChatId = 'chat_' + Date.now();
+            const chatContent = document.getElementById('chatMessages').innerHTML;
+            const existingIndex = chats.findIndex(c => c.id === currentChatId);
+            
+            if(existingIndex >= 0) {
+                chats[existingIndex].content = chatContent;
+                chats[existingIndex].date = new Date().toLocaleDateString();
+            } else {
+                chats.push({ id: currentChatId, title: 'دردشة ' + new Date().toLocaleTimeString(), content: chatContent, date: new Date().toLocaleDateString() });
+            }
+            localStorage.setItem('saved_chats', JSON.stringify(chats));
+        }
+
+        function renderChatList() {
+            const list = document.getElementById('chatList');
+            let chats = JSON.parse(localStorage.getItem('saved_chats')) || [];
+            list.innerHTML = '';
+            if(chats.length === 0) {
+                list.innerHTML = '<div style="color:var(--text-muted); font-size:13px; text-align:center; margin-top:20px;">لا توجد دردشات محفوظة</div>';
+                return;
+            }
+            chats.forEach(chat => {
+                const div = document.createElement('div');
+                div.className = 'chat-item';
+                div.innerText = chat.title + ` (${chat.date})`;
+                div.onclick = () => {
+                    currentChatId = chat.id;
+                    document.getElementById('chatMessages').innerHTML = chat.content;
+                    toggleSidebar();
+                };
+                list.appendChild(div);
+            });
+        }
+    </script>
+</body>
+</html>
